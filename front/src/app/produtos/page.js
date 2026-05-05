@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
 import { Button } from '@/components/ui/button';
 import {
     AlertDialog,
@@ -14,6 +13,12 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+    Alert,
+    AlertDescription,
+    AlertTitle,
+} from "@/components/ui/alert"
+
 
 export default function CadastroProduto() {
     const [produtos, setProdutos] = useState([]);
@@ -25,6 +30,7 @@ export default function CadastroProduto() {
     const [preco, setPreco] = useState('');
     const [estoque, setEstoque] = useState('');
     const [categoria, setCategoria] = useState('');
+    const [alerta, setAlerta] = useState(null);
 
     const API_URL = 'http://localhost:3000/produtos';
 
@@ -50,7 +56,11 @@ export default function CadastroProduto() {
         });
 
         if (response.ok) {
-            alert('Salvo!');
+            setAlerta({
+                tipo: 'sucesso',
+                titulo: 'Sucesso!',
+                mensagem: 'Produto salvo com sucesso.'
+            });
             limparFormulario();
         }
     };
@@ -82,6 +92,12 @@ export default function CadastroProduto() {
         await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
         carregarProdutos();
 
+        setAlerta({
+            tipo: 'erro',
+            titulo: 'Excluído!',
+            mensagem: 'Produto removido com sucesso.'
+        });
+
     };
 
     function limparFormulario() {
@@ -106,6 +122,13 @@ export default function CadastroProduto() {
         limparFormulario();
     }, []);
 
+    useEffect(() => {
+        if (alerta) {
+            const timer = setTimeout(() => setAlerta(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [alerta]);
+
     return (
         <>
             <style jsx global>{`body { font-family: sans-serif; }`}</style>
@@ -114,16 +137,25 @@ export default function CadastroProduto() {
                 <h2 className="text-2xl font-bold mb-6">Cadastro de Produtos</h2>
 
                 <div className="mb-[10px]">
-                    <button type="button" onClick={abrirModal} className="mr-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    <Button onClick={abrirModal}>
                         Pesquisar Cadastros
-                    </button>
+                    </Button>
 
-                    <button type="button" onClick={limparFormulario} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+                    <Button variant="secondary" onClick={limparFormulario}>
                         Novo Cadastro
-                    </button>
+                    </Button>
                 </div>
 
                 <hr className="mb-6" />
+
+                {alerta && (
+                    <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+                        <Alert className="animate-pulse w-[350px] shadow-lg border-2">
+                            <AlertTitle>{alerta.titulo}</AlertTitle>
+                            <AlertDescription>{alerta.mensagem}</AlertDescription>
+                        </Alert>
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit}>
                     <input type="hidden" value={produtoId} onChange={(e) => setProdutoId(e.target.value)} />

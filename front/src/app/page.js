@@ -14,6 +14,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+} from "@/components/ui/alert"
 
 
 export default function CadastroPessoa() {
@@ -31,6 +36,7 @@ export default function CadastroPessoa() {
   const [bairro, setBairro] = useState('');
   const [cidade, setCidade] = useState('');
   const [estado, setEstado] = useState('');
+  const [alerta, setAlerta] = useState(null);
 
   const formRef = useRef(null);
   const numeroRef = useRef(null);
@@ -172,7 +178,11 @@ export default function CadastroPessoa() {
     });
 
     if (response.ok) {
-      alert('Salvo!');
+      setAlerta({
+        tipo: 'sucesso',
+        titulo: 'Sucesso!',
+        mensagem: 'Pessoa cadastrada com sucesso.'
+    });
       limparFormulario();
     }
   };
@@ -245,15 +255,25 @@ export default function CadastroPessoa() {
         <h2 className="text-2xl font-bold mb-6">Cadastro de Pessoa</h2>
 
         <div className="mb-[10px]">
-          <button type="button" onClick={abrirModal} className="mr-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          <Button onClick={abrirModal}>
             Pesquisar Cadastros
-          </button>
-          <button type="button" onClick={limparFormulario} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+          </Button>
+
+          <Button variant="secondary" onClick={limparFormulario}>
             Novo Cadastro
-          </button>
+          </Button>
         </div>
 
         <hr className="mb-6" />
+
+        {alerta && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+            <Alert className="animate-pulse w-[350px] shadow-lg border-2">
+              <AlertTitle>{alerta.titulo}</AlertTitle>
+              <AlertDescription>{alerta.mensagem}</AlertDescription>
+            </Alert>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <input type="hidden" value={pessoaId} onChange={(e) => setPessoaId(e.target.value)} />
