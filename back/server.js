@@ -2,19 +2,17 @@ const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 
-require('dotenv').config()
+const app = express();
 
-const server = express();
-
-server.use(cors());
-server.use(express.json());
+app.use(cors());
+app.use(express.json());
 
 // Configuração do banco de dados
 const dbConfig = {
-    host: process.env.host,
-    user: process.env.user,
-    password: process.env.password,
-    database: process.env.database
+    host: 'localhost',
+    user: 'root', // Alterar para o usuário correspondente
+    password: '', // Alterar para a senha correspondente
+    database: 'exemplos'
 };
 
 const pool = mysql.createPool(dbConfig);
@@ -30,7 +28,7 @@ pool.getConnection()
     });
 
 // Rota GET - Listar todos
-server.get('/pessoas', async (req, res) => {
+app.get('/pessoas', async (req, res) => {
     try {
         const [rows] = await pool.execute('SELECT * FROM pessoas');
         res.json(rows);
@@ -40,7 +38,7 @@ server.get('/pessoas', async (req, res) => {
 });
 
 // Rota POST - Criar
-server.post('/pessoas', async (req, res) => {
+app.post('/pessoas', async (req, res) => {
     const {
         nome_razao_social, nome_social_fantasia, cep, endereco,
         numero, bairro, cidade, estado, pais, documento, tipo, email
@@ -76,7 +74,7 @@ server.post('/pessoas', async (req, res) => {
 });
 
 // Rota PUT - Atualizar
-server.put('/pessoas/:id', async (req, res) => {
+app.put('/pessoas/:id', async (req, res) => {
     const { id } = req.params;
     const {
         nome_razao_social, nome_social_fantasia, cep, endereco,
@@ -110,7 +108,7 @@ server.put('/pessoas/:id', async (req, res) => {
 });
 
 // Rota DELETE - Remover
-server.delete('/pessoas/:id', async (req, res) => {
+app.delete('/pessoas/:id', async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -125,105 +123,50 @@ server.delete('/pessoas/:id', async (req, res) => {
     }
 });
 
+app.post('/addProdutos', async (req, res) => {
+    try {
+        const { nome, descricao, preco, estoque, categoria } = req.body;
 
-//-------------------- Inicialização --------------------
-const PORT = 3000;
-server.listen(PORT, () => {
+        const sql = `INSERT INTO produtos (nome, descricao, preco, estoque, categoria) VALUES (?,?,?,?,?)`
+        const [resultado] = await pool.query(sql, [nome, descricao, preco, estoque, categoria]);
+        if (resultado.affectedRows == 1) {
+            return {
+                resposta: "Produto adicionado com sucesso!"
+            }
+        } else {
+            return {
+                resposta: "Não foi possível adicionar o produto"
+            }
+        }
+
+    } catch (error) {
+        console.log(`O erro foi: ${error}`)
+    }
+})
+
+app.put('/editProdutos', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { nome, descricao, preco, estoque, categoria } = req.body;
+
+        const sql = `UPDATE produtos set nome = ?, descricao=?, preco=?, estoque=? categoria=? WHERE id= ?`;
+        const [resultado] = await pool.query(sql, [nome, descricao, preco, estoque, categoria]);
+        if (resultado.affectedRows == 1) {
+            return{
+                resposta: "Produto atualizado"
+            }
+        } else {
+            return{
+                resposta: "Erro ao atualizar o produto"
+            }
+        };
+    } catch (error) {
+        console.log(`O erro foi: ${error}`)
+    }
+})
+
+// Inicialização
+const PORT = 3001;
+app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-});
-
-
-//-------------------- PRODUTOS --------------------
-
-
-//Get - ver
-server.get('/produtos', async (req, res) => {
-    try {
-        const [rows] = await pool.execute('SELECT * FROM produtos');
-        res.json(rows);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-})
-
-
-//post - adicionar
-server.post('/produtos', async (req, res) => {
-    const {
-        nome, descricao, preco, estoque, categoria
-    } = req.body;
-
-    const query = `
-        INSERT INTO produtos 
-        (nome, descricao, preco, estoque, categoria) 
-        VALUES (?, ?, ?, ?, ?)
-    `;
-
-    const values = [
-        nome,
-        descricao,
-        preco || null,
-        estoque,
-        categoria || null
-    ];
-
-    try {
-        const [result] = await pool.execute(query, values);
-        res.status(201).json({ id: result.insertId, ...req.body });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-})
-
-
-//put - atualizar
-server.put('/produtos/:id', async (req, res) => {
-    const { id } = req.params;
-    const {
-        nome, descricao, preco, estoque, categoria
-    } = req.body;
-
-    const query = `
-        UPDATE produtos 
-        SET nome = ?, descricao = ?, preco = ?, estoque = ?, 
-            categoria = ?
-        WHERE id = ?
-    `;
-
-    const values = [
-        nome,
-        descricao,
-        preco || null,
-        estoque,
-        categoria || null,
-        id
-    ];
-
-    try {
-        const [result] = await pool.execute(query, values);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: 'Registro não encontrado' });
-        }
-        res.json({ id, ...req.body });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-
-//delete - deletar
-server.delete('/produtos/:id', async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        const [result] = await pool.execute('DELETE FROM produtos WHERE id = ?', [id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: 'Registro não encontrado' });
-        }
-        res.status(204).send();
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
 });
