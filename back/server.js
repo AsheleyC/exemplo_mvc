@@ -39,9 +39,9 @@ app.get('/pessoas', async (req, res) => {
 
 // Rota POST - Criar
 app.post('/pessoas', async (req, res) => {
-    const {
-        nome_razao_social, nome_social_fantasia, cep, endereco,
-        numero, bairro, cidade, estado, pais, documento, tipo, email
+    const { 
+        nome_razao_social, nome_social_fantasia, cep, endereco, 
+        numero, bairro, cidade, estado, pais, documento, tipo, email 
     } = req.body;
 
     const query = `
@@ -49,19 +49,19 @@ app.post('/pessoas', async (req, res) => {
         (nome_razao_social, nome_social_fantasia, cep, endereco, numero, bairro, cidade, estado, pais, documento, tipo, email) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-
+    
     const values = [
-        nome_razao_social,
-        nome_social_fantasia || null,
-        cep || null,
-        endereco || null,
-        numero || null,
-        bairro || null,
-        cidade || null,
-        estado || null,
-        pais || 'Brasil',
-        documento,
-        tipo,
+        nome_razao_social, 
+        nome_social_fantasia || null, 
+        cep || null, 
+        endereco || null, 
+        numero || null, 
+        bairro || null, 
+        cidade || null, 
+        estado || null, 
+        pais || 'Brasil', 
+        documento, 
+        tipo, 
         email || null
     ];
 
@@ -76,9 +76,9 @@ app.post('/pessoas', async (req, res) => {
 // Rota PUT - Atualizar
 app.put('/pessoas/:id', async (req, res) => {
     const { id } = req.params;
-    const {
-        nome_razao_social, nome_social_fantasia, cep, endereco,
-        numero, bairro, cidade, estado, pais, documento, tipo, email
+    const { 
+        nome_razao_social, nome_social_fantasia, cep, endereco, 
+        numero, bairro, cidade, estado, pais, documento, tipo, email 
     } = req.body;
 
     const query = `
@@ -88,16 +88,16 @@ app.put('/pessoas/:id', async (req, res) => {
             tipo = ?, email = ? 
         WHERE id = ?
     `;
-
+    
     const values = [
-        nome_razao_social, nome_social_fantasia || null, cep || null, endereco || null,
-        numero || null, bairro || null, cidade || null, estado || null, pais || 'Brasil',
+        nome_razao_social, nome_social_fantasia || null, cep || null, endereco || null, 
+        numero || null, bairro || null, cidade || null, estado || null, pais || 'Brasil', 
         documento, tipo, email || null, id
     ];
 
     try {
         const [result] = await pool.execute(query, values);
-
+        
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Registro não encontrado' });
         }
@@ -123,45 +123,88 @@ app.delete('/pessoas/:id', async (req, res) => {
     }
 });
 
-app.post('/addProdutos', async (req, res) => {
+app.get('/produtos', async(req,res)=>{
     try {
-        const { nome, descricao, preco, estoque, categoria } = req.body;
-
-        const sql = `INSERT INTO produtos (nome, descricao, preco, estoque, categoria) VALUES (?,?,?,?,?)`
-        const [resultado] = await pool.query(sql, [nome, descricao, preco, estoque, categoria]);
-        if (resultado.affectedRows == 1) {
-            return {
-                resposta: "Produto adicionado com sucesso!"
-            }
-        } else {
-            return {
-                resposta: "Não foi possível adicionar o produto"
-            }
-        }
-
+        const [rows] = await pool.execute('SELECT * FROM produtos');
+        res.json(rows);
     } catch (error) {
-        console.log(`O erro foi: ${error}`)
+        res.status(500).json({ error: error.message });
     }
 })
 
-app.put('/editProdutos', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { nome, descricao, preco, estoque, categoria } = req.body;
+app.post('/produtos',async(req,res)=>{
+    const { 
+        nome, descricao, preco, estoque, 
+        categoria
+    } = req.body;
 
-        const sql = `UPDATE produtos set nome = ?, descricao=?, preco=?, estoque=? categoria=? WHERE id= ?`;
-        const [resultado] = await pool.query(sql, [nome, descricao, preco, estoque, categoria]);
-        if (resultado.affectedRows == 1) {
-            return{
-                resposta: "Produto atualizado"
-            }
-        } else {
-            return{
-                resposta: "Erro ao atualizar o produto"
-            }
-        };
+    const query = `
+        INSERT INTO produtos 
+        (nome, descricao, preco, estoque, categoria ) 
+        VALUES (?, ?, ?, ?, ?)
+    `;
+    
+    const values = [
+        nome, 
+        descricao || null, 
+        preco || null, 
+        estoque || null, 
+        categoria || null, 
+        
+    ];
+
+    try {
+        const [result] = await pool.execute(query, values);
+        res.status(201).json({ id: result.insertId, ...req.body });
+        
     } catch (error) {
-        console.log(`O erro foi: ${error}`)
+        res.status(500).json({ error: error.message });
+    }
+})
+
+app.put('/produtos/:id', async (req,res)=>{
+    const { id } = req.params;
+    const { 
+        nome, descricao, preco, estoque, 
+        categoria
+    } = req.body;
+
+    const query = `
+        UPDATE produtos
+        SET nome = ?, descricao = ?, preco = ?, estoque = ?, 
+            caegoria = ?
+        WHERE id = ?
+    `;
+    
+    const values = [
+        nome, descricao, preco || null, estoque, 
+        categoria || null, id
+    ];
+
+    try {
+        const [result] = await pool.execute(query, values);
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Registro não encontrado' });
+        }
+        res.json({ id, ...req.body });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+})
+
+app.delete('/produtos/:id', async (req,res)=>{
+    const { id } = req.params;
+
+    try {
+        const [result] = await pool.execute('DELETE FROM produtos WHERE id = ?', [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Registro não encontrado' });
+        }
+        res.status(204).send();
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 })
 
