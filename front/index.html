@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Pessoa</title>
+    <style>
+        body { font-family: sans-serif; }
+        .form-group { margin-bottom: 10px; }
+        label { display: block; font-weight: bold; font-size: 14px; }
+        input { padding: 5px; width: 100%; max-width: 300px; }
+        .error { color: red; font-size: 12px; display: none; }
+        
+        /* Estilos do Modal */
+        #modalPesquisa { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: #fff; margin: 5% auto; padding: 20px; width: 90%; max-width: 800px; border-radius: 5px; }
+        .btn-fechar { float: right; cursor: pointer; color: red; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .btn-acao { margin-right: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h2>Cadastro de Pessoa</h2>
+    
+    <button type="button" onclick="abrirModal()">Pesquisar Cadastros</button>
+    <button type="button" onclick="limparFormulario()">Novo Cadastro</button>
+    <hr>
+
+    <form id="formPessoa">
+        <input type="hidden" id="pessoa_id" name="pessoa_id">
+
+        <div class="form-group">
+            <label>CPF ou CNPJ</label>
+            <input type="text" id="documento" name="documento" maxlength="18" required>
+        </div>
+
+        <div class="form-group">
+            <label>Nome ou Razão Social</label>
+            <input type="text" id="nome_razao_social" name="nome_razao_social" required>
+        </div>
+
+        <div class="form-group">
+            <label>Nome Social ou Nome Fantasia</label>
+            <input type="text" id="nome_social_fantasia" name="nome_social_fantasia">
+        </div>
+
+        <div class="form-group">
+            <label>CEP</label>
+            <input type="text" id="cep" name="cep" maxlength="9" required>
+        </div>
+
+        <div class="form-group">
+            <label>Endereço</label>
+            <input type="text" id="endereco" name="endereco" required>
+        </div>
+
+        <div class="form-group">
+            <label>Número</label>
+            <input type="text" id="numero" name="numero" required>
+        </div>
+
+        <div class="form-group">
+            <label>Bairro</label>
+            <input type="text" id="bairro" name="bairro" required>
+        </div>
+
+        <div class="form-group">
+            <label>Cidade</label>
+            <input type="text" id="cidade" name="cidade" required>
+        </div>
+
+        <div class="form-group">
+            <label>Estado</label>
+            <input type="text" id="estado" name="estado" maxlength="2" required>
+        </div>
+
+        <div class="form-group">
+            <label>E-mail</label>
+            <input type="email" id="email" name="email" required>
+            <span id="emailError" class="error">E-mail inválido</span>
+        </div>
+
+        <button type="submit" id="btnSalvar">Salvar</button>
+    </form>
+
+    <!-- Modal de Pesquisa -->
+    <div id="modalPesquisa">
+        <div class="modal-content">
+            <span class="btn-fechar" onclick="fecharModal()">X Fechar</span>
+            <h3>Registros</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome/Razão</th>
+                        <th>Documento</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaPessoas">
+                    <!-- Registros inseridos via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/pessoas';
+        
+        // Elementos do DOM
+        const form = document.getElementById('formPessoa');
+        const inputId = document.getElementById('pessoa_id');
+        const inputDocumento = document.getElementById('documento');
+        const inputCep = document.getElementById('cep');
+        const inputEmail = document.getElementById('email');
+        const emailError = document.getElementById('emailError');
+        const modal = document.getElementById('modalPesquisa');
+        const tabela = document.getElementById('tabelaPessoas');
+
+        // ================= VALIDAÇÕES =================
+
+        function validarEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        function validarCPF(cpf) {
+            if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+            let soma = 0, resto;
+            for (let i = 1; i <= 9; i++) soma += parseInt(cpf.substring(i-1, i)) * (11 - i);
+            resto = (soma * 10) % 11;
+            if ((resto === 10) || (resto === 11)) resto = 0;
+            if (resto !== parseInt(cpf.substring(9, 10))) return false;
+            soma = 0;
+            for (let i = 1; i <= 10; i++) soma += parseInt(cpf.substring(i-1, i)) * (12 - i);
+            resto = (soma * 10) % 11;
+            if ((resto === 10) || (resto === 11)) resto = 0;
+            if (resto !== parseInt(cpf.substring(10, 11))) return false;
+            return true;
+        }
+
+        function validarCNPJ(cnpj) {
+            if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
+            let tamanho = cnpj.length - 2;
+            let numeros = cnpj.substring(0, tamanho);
+            let digitos = cnpj.substring(tamanho);
+            let soma = 0, pos = tamanho - 7;
+            for (let i = tamanho; i >= 1; i--) {
+                soma += numeros.charAt(tamanho - i) * pos--;
+                if (pos < 2) pos = 9;
+            }
+            let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+            if (resultado != digitos.charAt(0)) return false;
+            tamanho = tamanho + 1;
+            numeros = cnpj.substring(0, tamanho);
+            soma = 0; pos = tamanho - 7;
+            for (let i = tamanho; i >= 1; i--) {
+                soma += numeros.charAt(tamanho - i) * pos--;
+                if (pos < 2) pos = 9;
+            }
+            resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+            if (resultado != digitos.charAt(1)) return false;
+            return true;
+        }
+
+        function validarDocumento(docLimpo) {
+            if (docLimpo.length === 11) return validarCPF(docLimpo);
+            if (docLimpo.length === 14) return validarCNPJ(docLimpo);
+            return false;
+        }
+
+        // ================= MÁSCARAS E EVENTOS =================
+
+        inputDocumento.addEventListener('input', function(e) {
+            let valor = e.target.value.replace(/\D/g, "");
+            if (valor.length <= 11) {
+                valor = valor.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+            } else {
+                valor = valor.replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
+            }
+            e.target.value = valor;
+        });
+
+        inputCep.addEventListener('input', async function(e) {
+            let valor = e.target.value.replace(/\D/g, "");
+            valor = valor.replace(/(\d{5})(\d)/, "$1-$2");
+            e.target.value = valor;
+
+            const cepLimpo = valor.replace(/\D/g, "");
+            if (cepLimpo.length === 8) {
+                try {
+                    const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+                    const data = await response.json();
+                    if (!data.erro) {
+                        document.getElementById('endereco').value = data.logradouro || '';
+                        document.getElementById('bairro').value = data.bairro || '';
+                        document.getElementById('cidade').value = data.localidade || '';
+                        document.getElementById('estado').value = data.uf || '';
+                        document.getElementById('numero').focus();
+                    }
+                } catch (error) { console.error(error); }
+            }
+        });
+
+        inputEmail.addEventListener('blur', function(e) {
+            emailError.style.display = (!validarEmail(e.target.value) && e.target.value !== "") ? 'block' : 'none';
+        });
+
+        // ================= CRUD =================
+
+        // Submissão (Criar / Atualizar)
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            if (!validarEmail(inputEmail.value)) return alert("E-mail com formato inválido.");
+            
+            const docLimpo = inputDocumento.value.replace(/\D/g, "");
+            if (!validarDocumento(docLimpo)) return alert("CPF ou CNPJ inválido matematicamente.");
+
+            const payload = {
+                documento: docLimpo,
+                tipo: docLimpo.length > 11 ? 'CNPJ' : 'CPF',
+                nome_razao_social: document.getElementById('nome_razao_social').value,
+                nome_social_fantasia: document.getElementById('nome_social_fantasia').value,
+                cep: inputCep.value.replace(/\D/g, ""),
+                endereco: document.getElementById('endereco').value,
+                numero: document.getElementById('numero').value,
+                bairro: document.getElementById('bairro').value,
+                cidade: document.getElementById('cidade').value,
+                estado: document.getElementById('estado').value,
+                email: inputEmail.value
+            };
+
+            const idAtual = inputId.value;
+            const url = idAtual ? `${API_URL}/${idAtual}` : API_URL;
+            const metodo = idAtual ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method: metodo,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert('Dados salvos com sucesso!');
+                    limparFormulario();
+                } else {
+                    const errorData = await response.json();
+                    alert('Erro: ' + (errorData.error || errorData.message || 'Falha ao salvar.'));
+                }
+            } catch (error) { alert('Erro de conexão com o servidor.'); }
+        });
+
+        // Listar (Read)
+        async function carregarPessoas() {
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                tabela.innerHTML = '';
+                data.forEach(p => {
+                    tabela.innerHTML += `
+                        <tr>
+                            <td>${p.id}</td>
+                            <td>${p.nome_razao_social}</td>
+                            <td>${p.documento}</td>
+                            <td>
+                                <button class="btn-acao" onclick="editarPessoa(${p.id})">Editar</button>
+                                <button class="btn-acao" onclick="deletarPessoa(${p.id})">Excluir</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (error) { alert('Erro ao carregar dados.'); }
+        }
+
+        // Preencher para Editar
+        async function editarPessoa(id) {
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                const pessoa = data.find(p => p.id === id);
+                
+                if(pessoa) {
+                    inputId.value = pessoa.id;
+                    document.getElementById('nome_razao_social').value = pessoa.nome_razao_social;
+                    document.getElementById('nome_social_fantasia').value = pessoa.nome_social_fantasia || '';
+                    document.getElementById('endereco').value = pessoa.endereco || '';
+                    document.getElementById('numero').value = pessoa.numero || '';
+                    document.getElementById('bairro').value = pessoa.bairro || '';
+                    document.getElementById('cidade').value = pessoa.cidade || '';
+                    document.getElementById('estado').value = pessoa.estado || '';
+                    document.getElementById('email').value = pessoa.email || '';
+                    
+                    // Dispara eventos artificiais para ativar máscaras
+                    inputDocumento.value = pessoa.documento;
+                    inputDocumento.dispatchEvent(new Event('input'));
+                    inputCep.value = pessoa.cep || '';
+                    inputCep.dispatchEvent(new Event('input'));
+                    
+                    fecharModal();
+                }
+            } catch (error) { alert('Erro ao buscar dados para edição.'); }
+        }
+
+        // Deletar
+        async function deletarPessoa(id) {
+            if (!confirm('Deseja realmente excluir este registro?')) return;
+            try {
+                const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                if (response.ok) carregarPessoas();
+                else alert('Erro ao excluir.');
+            } catch (error) { alert('Erro de conexão.'); }
+        }
+
+        // ================= CONTROLES DE INTERFACE =================
+
+        function limparFormulario() {
+            form.reset();
+            inputId.value = '';
+            emailError.style.display = 'none';
+        }
+
+        function abrirModal() {
+            modal.style.display = 'block';
+            carregarPessoas();
+        }
+
+        function fecharModal() {
+            modal.style.display = 'none';
+        }
+
+    </script>
+</body>
+</html>

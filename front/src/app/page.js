@@ -41,7 +41,7 @@ export default function CadastroPessoa() {
   const formRef = useRef(null);
   const numeroRef = useRef(null);
 
-  const API_URL = 'http://localhost:3000/pessoas';
+  const API_URL = 'http://localhost:3001/pessoas';
 
   // ================= VALIDAÇÕES =================
   function validarEmail(emailStr) {
@@ -215,6 +215,7 @@ export default function CadastroPessoa() {
   };
 
   const deletarPessoa = async (id) => {
+    if (!confirm('Excluir?')) return;
     await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
     carregarPessoas();
   };
@@ -290,7 +291,7 @@ export default function CadastroPessoa() {
 
           <div className="form-group mb-[10px]">
             <label className="block font-bold text-[14px]">Nome Social ou Nome Fantasia</label>
-            <input type="text" value={nomeSocialFantasia} onChange={(e) => setNomeSocialFantasia(e.target.value)} className="p-[5px] w-full max-w-[300px] border border-gray-300 rounded" />
+            <input type="text"  value={nomeSocialFantasia} onChange={(e) => setNomeSocialFantasia(e.target.value)} className="p-[5px] w-full max-w-[300px] border border-gray-300 rounded" />
           </div>
 
           <div className="form-group mb-[10px]">
@@ -331,7 +332,9 @@ export default function CadastroPessoa() {
             </span>
           </div>
 
-          <Button type="submit" size="lg">Salvar</Button>
+          <button type="submit" className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+            Salvar
+          </button>
         </form>
 
         <div className={`fixed inset-0 z-50 ${modalAberto ? 'block' : 'hidden'}`} style={{ background: 'rgba(0,0,0,0.5)' }}>
@@ -361,32 +364,9 @@ export default function CadastroPessoa() {
                       <button className="px-2 py-1 bg-blue-500 text-white text-xs rounded mr-[5px]" onClick={() => editarPessoa(p.id)}>
                         Editar
                       </button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <button className="px-2 py-1 bg-red-500 text-white text-xs rounded">
-                            Excluir
-                          </button>
-                        </AlertDialogTrigger>
-
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Essa ação não pode ser desfeita. Isso irá excluir o produto permanentemente.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-
-                            <AlertDialogAction
-                              onClick={() => deletarPessoa(p.id)}
-                            >
-                              Confirmar exclusão
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <button className="px-2 py-1 bg-red-500 text-white text-xs rounded" onClick={() => deletarPessoa(p.id)}>
+                        Excluir
+                      </button>
                     </td>
                   </tr>
                 ))}

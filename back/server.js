@@ -2,19 +2,17 @@ const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 
-require('dotenv').config()
+const app = express();
 
-const server = express();
-
-server.use(cors());
-server.use(express.json());
+app.use(cors());
+app.use(express.json());
 
 // Configuração do banco de dados
 const dbConfig = {
-    host: process.env.host,
-    user: process.env.user,
-    password: process.env.password,
-    database: process.env.database
+    host: 'localhost',
+    user: 'root', // Alterar para o usuário correspondente
+    password: '', // Alterar para a senha correspondente
+    database: 'exemplos'
 };
 
 const pool = mysql.createPool(dbConfig);
@@ -30,7 +28,7 @@ pool.getConnection()
     });
 
 // Rota GET - Listar todos
-server.get('/pessoas', async (req, res) => {
+app.get('/pessoas', async (req, res) => {
     try {
         const [rows] = await pool.execute('SELECT * FROM pessoas');
         res.json(rows);
@@ -40,10 +38,10 @@ server.get('/pessoas', async (req, res) => {
 });
 
 // Rota POST - Criar
-server.post('/pessoas', async (req, res) => {
-    const {
-        nome_razao_social, nome_social_fantasia, cep, endereco,
-        numero, bairro, cidade, estado, pais, documento, tipo, email
+app.post('/pessoas', async (req, res) => {
+    const { 
+        nome_razao_social, nome_social_fantasia, cep, endereco, 
+        numero, bairro, cidade, estado, pais, documento, tipo, email 
     } = req.body;
 
     const query = `
@@ -51,19 +49,19 @@ server.post('/pessoas', async (req, res) => {
         (nome_razao_social, nome_social_fantasia, cep, endereco, numero, bairro, cidade, estado, pais, documento, tipo, email) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-
+    
     const values = [
-        nome_razao_social,
-        nome_social_fantasia || null,
-        cep || null,
-        endereco || null,
-        numero || null,
-        bairro || null,
-        cidade || null,
-        estado || null,
-        pais || 'Brasil',
-        documento,
-        tipo,
+        nome_razao_social, 
+        nome_social_fantasia || null, 
+        cep || null, 
+        endereco || null, 
+        numero || null, 
+        bairro || null, 
+        cidade || null, 
+        estado || null, 
+        pais || 'Brasil', 
+        documento, 
+        tipo, 
         email || null
     ];
 
@@ -76,11 +74,11 @@ server.post('/pessoas', async (req, res) => {
 });
 
 // Rota PUT - Atualizar
-server.put('/pessoas/:id', async (req, res) => {
+app.put('/pessoas/:id', async (req, res) => {
     const { id } = req.params;
-    const {
-        nome_razao_social, nome_social_fantasia, cep, endereco,
-        numero, bairro, cidade, estado, pais, documento, tipo, email
+    const { 
+        nome_razao_social, nome_social_fantasia, cep, endereco, 
+        numero, bairro, cidade, estado, pais, documento, tipo, email 
     } = req.body;
 
     const query = `
@@ -90,16 +88,16 @@ server.put('/pessoas/:id', async (req, res) => {
             tipo = ?, email = ? 
         WHERE id = ?
     `;
-
+    
     const values = [
-        nome_razao_social, nome_social_fantasia || null, cep || null, endereco || null,
-        numero || null, bairro || null, cidade || null, estado || null, pais || 'Brasil',
+        nome_razao_social, nome_social_fantasia || null, cep || null, endereco || null, 
+        numero || null, bairro || null, cidade || null, estado || null, pais || 'Brasil', 
         documento, tipo, email || null, id
     ];
 
     try {
         const [result] = await pool.execute(query, values);
-
+        
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Registro não encontrado' });
         }
@@ -110,7 +108,7 @@ server.put('/pessoas/:id', async (req, res) => {
 });
 
 // Rota DELETE - Remover
-server.delete('/pessoas/:id', async (req, res) => {
+app.delete('/pessoas/:id', async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -125,19 +123,7 @@ server.delete('/pessoas/:id', async (req, res) => {
     }
 });
 
-
-//-------------------- Inicialização --------------------
-const PORT = 3000;
-server.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-});
-
-
-//-------------------- PRODUTOS --------------------
-
-
-//Get - ver
-server.get('/produtos', async (req, res) => {
+app.get('/produtos', async(req,res)=>{
     try {
         const [rows] = await pool.execute('SELECT * FROM produtos');
         res.json(rows);
@@ -146,62 +132,58 @@ server.get('/produtos', async (req, res) => {
     }
 })
 
-
-//post - adicionar
-server.post('/produtos', async (req, res) => {
-    const {
-        nome, descricao, preco, estoque, categoria
+app.post('/produtos',async(req,res)=>{
+    const { 
+        nome, descricao, preco, estoque, 
+        categoria
     } = req.body;
 
     const query = `
         INSERT INTO produtos 
-        (nome, descricao, preco, estoque, categoria) 
+        (nome, descricao, preco, estoque, categoria ) 
         VALUES (?, ?, ?, ?, ?)
     `;
-
+    
     const values = [
-        nome,
-        descricao,
-        preco || null,
-        estoque,
-        categoria || null
+        nome, 
+        descricao || null, 
+        preco || null, 
+        estoque || null, 
+        categoria || null, 
+        
     ];
 
     try {
         const [result] = await pool.execute(query, values);
         res.status(201).json({ id: result.insertId, ...req.body });
+        
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 })
 
-
-//put - atualizar
-server.put('/produtos/:id', async (req, res) => {
+app.put('/produtos/:id', async (req,res)=>{
     const { id } = req.params;
-    const {
-        nome, descricao, preco, estoque, categoria
+    const { 
+        nome, descricao, preco, estoque, 
+        categoria
     } = req.body;
 
     const query = `
-        UPDATE produtos 
+        UPDATE produtos
         SET nome = ?, descricao = ?, preco = ?, estoque = ?, 
-            categoria = ?
+            caegoria = ?
         WHERE id = ?
     `;
-
+    
     const values = [
-        nome,
-        descricao,
-        preco || null,
-        estoque,
-        categoria || null,
-        id
+        nome, descricao, preco || null, estoque, 
+        categoria || null, id
     ];
 
     try {
         const [result] = await pool.execute(query, values);
-
+        
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Registro não encontrado' });
         }
@@ -209,11 +191,9 @@ server.put('/produtos/:id', async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-});
+})
 
-
-//delete - deletar
-server.delete('/produtos/:id', async (req, res) => {
+app.delete('/produtos/:id', async (req,res)=>{
     const { id } = req.params;
 
     try {
@@ -226,4 +206,10 @@ server.delete('/produtos/:id', async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+})
+
+// Inicialização
+const PORT = 3001;
+app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
 });
